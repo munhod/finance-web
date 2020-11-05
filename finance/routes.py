@@ -1,7 +1,8 @@
-from flask import flash, jsonify, redirect, render_template, request, session, url_for, flash
+from flask import flash, jsonify, redirect, render_template, request, url_for, flash
+from flask_login import login_user, current_user, login_required, logout_user
 from finance.models import User, Transactions
-from finance import app, db
-from finance.helpers import apology, login_required, lookup
+from finance import app, db, login_manager
+from finance.helpers import apology, lookup
 from finance.forms import LoginForm, RegisterForm, BuyForm, SellForm, QuoteForm
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -10,15 +11,19 @@ from werkzeug.security import check_password_hash, generate_password_hash
 def index():
     """Show portfolio of stocks"""
 
-    rows = db.session.query(Transactions.symbol,db.func.sum(Transactions.shares)).filter_by(user_id=session['user_id']).group_by(Transactions.symbol).having(db.func.sum(Transactions.shares)!=0).all()
+    if current_user.is_authenticated:
+        rows = db.session.query(Transactions.symbol,db.func.sum(Transactions.shares)).\
+                                filter_by(user_id=current_user.id).group_by(Transactions.symbol).\
+                                having(db.func.sum(Transactions.shares)!=0).all()
 
-    symbols = [row[0] for row in rows]
-    prices = {symbol: lookup(symbol)['price'] for symbol in symbols}
-    prices['cash'] = User.query.filter_by(id=session['user_id']).first().cash
-    prices['total'] = sum([row[1] * prices[row[0]] for row in rows])
-    
-    return render_template('index.html', rows=rows, prices=prices)
-
+        symbols = [row[0] for row in rows]
+        prices = {symbol: lookup(symbol)['price'] for symbol in symbols}
+        prices['cash'] = User.query.filter_by(id=current_user.id).first().cash
+        prices['total'] = sum([row[1] * prices[row[0]] for row in rows])
+        
+        return render_template('index.html', rows=rows, prices=prices)
+    else:
+        return redirect('login')
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required
@@ -28,7 +33,7 @@ def buy():
     
     if form.validate_on_submit():
         resp = lookup(form.symbol.data)
-        user = User.query.filter_by(id=session['user_id']).first()
+        user = User.query.filter_by(id=current_user.id).first()
         
         total_price = int(form.shares.data) * resp['price']
         
@@ -48,22 +53,21 @@ def buy():
 @login_required
 def history():
     """Show history of transactions"""
-    history = Transactions.query.filter_by(user_id=session['user_id']).all()
+    history = Transactions.query.filter_by(user_id=current_user.id).all()
     
     return render_template('history.html', history=history)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user and check_password_hash(user.hash, form.password.data):
-            # Remember which user has logged in
-            session["user_id"] = user.id
-            flash('LOGGED IN!', 'success')
+            login_user(user)
+            
+            flash('Logged in!', 'success')  
             # Redirect user to home page
-            return redirect("/")
+            return redirect('/')
         else:
             flash('Login unsuccessful. Please check username and password', 'danger')
         
@@ -74,10 +78,10 @@ def logout():
     """Log user out"""
 
     # Forget any user_id
-    session.clear()
+    logout_user()
 
     # Redirect user to login form
-    return redirect("/")
+    return redirect('/')
 
 
 @app.route("/quote", methods=["GET", "POST"])
@@ -95,7 +99,7 @@ def quote():
 def register():
     """Register user"""
     form = RegisterForm()
-    
+
     if form.validate_on_submit():
         user = User(username=form.username.data, hash=generate_password_hash(form.password.data))
         db.session.add(user)
@@ -110,22 +114,22 @@ def register():
 @login_required
 def sell():
     """Sell shares of stock"""
-    form = SellForm()
-    rows = db.session.query(Transactions.symbol, Transactions.shares).filter_by(user_id=session['user_id']).all()
+    
+    rows = db.session.query(Transactions.symbol, Transactions.shares).filter_by(user_id=current_user.id).all()
     symbols = [row[0] for row in rows]
     
-    if form.validate_on_submit():
+    form = SellForm()
+    form.symbol.choices = ['Select Symbol'] + list(set(symbols))
     
+    if form.validate_on_submit():
         if form.symbol.data not in symbols:
             return apology('symbol not in portfolio', 403)
         
         elif int(form.shares.data) > sum([row[1] for row in rows if row[0] == form.symbol.data]):
             return apology('share number exceeded', 403)
         
-        user = User.query.filter_by(id=session['user_id']).first()
-        
+        user = User.query.filter_by(id=current_user.id).first()
         resp = lookup(form.symbol.data)
-        
         total_price = int(form.shares.data) * resp['price']
         
         user.cash += total_price

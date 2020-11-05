@@ -3,8 +3,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, IntegerField, SelectField
 from wtforms.validators import DataRequired, Length, ValidationError, EqualTo, NumberRange
 from finance import db
-from finance.models import Transactions
-from flask import session
+from finance.models import Transactions, User
+
 
 class LoginForm(FlaskForm):
     
@@ -20,10 +20,10 @@ class RegisterForm(FlaskForm):
                                      validators=[DataRequired(), EqualTo('password')])
     submit = SubmitField('Sign Up')
     
-    #def validate_username(self, username):
-    #    user = User.query.filter_by(username=username.data).first()
-    #    if user:
-    #        raise ValidationError('That username is taken. Please choose a different one')
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user:
+            raise ValidationError('That username is taken. Please choose a different one')
     
 class BuyForm(FlaskForm):
     
@@ -33,11 +33,8 @@ class BuyForm(FlaskForm):
 
     
 class SellForm(FlaskForm):
-    
-    rows = db.session.query(Transactions.symbol, Transactions.shares).filter_by(user_id=1).all()
-    symbols = [row[0] for row in rows]
-    
-    symbol = SelectField('Symbol', choices=set(symbols), validators=[DataRequired()])
+
+    symbol = SelectField('Symbol', validators=[DataRequired()])
     shares = IntegerField('Shares', validators=[DataRequired(), NumberRange(min=1)])
     submit = SubmitField('Sell')
 

@@ -1,9 +1,13 @@
 from datetime import datetime
+from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.sql import func
-from finance import db
+from finance import db, login_manager
 
-class User(db.Model):
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     hash = db.Column(db.String(120), nullable=False)
@@ -13,7 +17,7 @@ class User(db.Model):
     def __repr__(self):
         return f"User({self.username})"
     
-class Transactions(db.Model):
+class Transactions(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     symbol = db.Column(db.String(20), nullable=False)
     shares =  db.Column(db.Integer, nullable=False)

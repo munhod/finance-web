@@ -1,12 +1,11 @@
 import os
-
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_session import Session
+from flask_login import LoginManager
 from tempfile import mkdtemp
 from werkzeug.exceptions import default_exceptions, HTTPException, InternalServerError
-
 from finance.helpers import apology, usd
+
 
 os.environ['API_KEY'] = 'pk_92ef5cd5464140d0afeea62ccfeb90bc'
 
@@ -34,9 +33,12 @@ app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///finance.db"
 app.config["SESSION_FILE_DIR"] = mkdtemp()
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
-Session(app)
 
 db = SQLAlchemy(app=app)
+login_manager = LoginManager(app=app)
+
+login_manager.login_view = 'login'
+login_manager.login_message = ''
 
 from finance import routes
 
