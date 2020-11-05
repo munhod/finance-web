@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Home
+{% endblock %}
+
+{% block main %}
+<h1>Holdings</h1>
+<div class="table-responsive-lg">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Shares</th>
+                <th>Last Price</th>
+                <th>TOTAL</th>
+            </tr>
+        </thead>
+    {% for row in rows %}
+        <tr>
+            <td>{{ row[0] }}</td>
+            <td>{{ row[1] }}</td>
+            <td>{{ prices[row[0]] }}</td>
+            <td>{{ prices[row[0]] * row[1] }}</td>
+            
+        </tr>
+    {% endfor%}
+        <tr>
+            <td>Cash</td>
+            <td></td>
+            <td></td>
+            <td>{{ prices['cash']}}</td>
+
+        </tr>
+        <tr>
+            <td>TOTAL</td>
+            <td></td>
+            <td></td>
+            <td>{{ prices['cash'] + prices['total']}}</td>
+        </tr>
+    </table>
+</div>
+{% endblock %}

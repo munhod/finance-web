@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    History
+{% endblock %}
+
+{% block main %}
+
+<h1>Transaction History</h1>
+<div class="table-responsive-lg">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Symbol</th>
+                <th>Shares</th>
+                <th>Transaction Price</th>
+                <th>Date and Time</th>
+            </tr>
+        </thead>
+        
+        {% for row in history %}
+        <tr>
+            <td>{{ row.symbol }}</td>
+            <td>{{ row.shares }}</td>
+            <td>{{ row.price }}</td>
+            <td>{{ row.date }}</td>
+        </tr>
+    {% endfor%}
+
+    </table>
+</div>
+
+{% endblock %}
